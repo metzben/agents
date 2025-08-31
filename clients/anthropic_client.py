@@ -39,17 +39,3 @@ class AnthropicClient:
             raise RuntimeError(f"Failed to send request to Anthropic API: {str(e)}")
         except Exception as e:
             raise RuntimeError(f"Unexpected error in get method: {str(e)}")
-
-    def count_tokens(self, message: str, model: str = None):
-        # Use provided model or default to config model
-        if model is None:
-            model = self.config.anthropic_model_sonnet
-
-        data = {"model": model, "messages": [{"role": "user", "content": message}]}
-
-        url = "https://api.anthropic.com/v1/messages/count_tokens"
-        response = requests.post(url, headers=self.headers, json=data)
-        response.raise_for_status()
-
-        result = response.json()
-        return result["input_tokens"]

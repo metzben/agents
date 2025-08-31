@@ -56,3 +56,6 @@ htmlcov/
 
 # Guides directory
 guides/
+
+# Source documentation
+source.md

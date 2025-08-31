@@ -2,17 +2,18 @@
 
 ```
 /Users/benjaminmetz/python/agents
+├── agent.py
 ├── baseservice
 │   ├── base_api.py
 │   ├── base_models.py
 │   └── base_service.py
-├── CLAUDE_DRAFT.md
 ├── CLAUDE.md
 ├── clients
-│   ├── __init.py__
+│   ├── __init__.py
 │   ├── anthropic_client.py
 │   ├── anthropic_models.py
-│   └── test_anthropic_mcp.py
+│   ├── test_anthropic_mcp.py
+│   └── tools.py
 ├── config.py
 ├── dir_structure.md
 ├── Dockerfile
@@ -25,7 +26,6 @@
 │   └── database.py
 ├── secret_manager.py
 ├── source.md
-├── synctools
 ├── uv.lock
 └── yoyo.ini
 

@@ -57,8 +57,7 @@ def test_get_request(anthropic_client):
 
 
 def execute_tool(tool_name: str, tool_input: Dict[str, Any]) -> str:
-    tool_registry = {
-        "convert_markdown_to_toml_gemini": convert_markdown_to_toml_gemini}
+    tool_registry = {"convert_markdown_to_toml_gemini": convert_markdown_to_toml_gemini}
     if tool_name == "convert_markdown_to_toml_gemini":
         markdown_doc = tool_input["markdown_doc"]
         model = tool_input.get("model", "gemini-2.5-flash")
