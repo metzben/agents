@@ -30,4 +30,3 @@ make migrate
 - Health check: `GET /health`
 - API documentation: `GET /docs` (when server is running)
 
-Generated with [Claude Code](https://claude.ai/code)
