@@ -1,6 +1,12 @@
 from clients.anthropic_client import AnthropicClient
 import logging
-from clients.anthropic_models import Message, Tool, ExecuteToolResult
+from clients.anthropic_models import (
+    Message,
+    Tool,
+    ExecuteToolResult,
+    AnthropicRequest,
+    ToolChoice
+)
 from typing import List, Optional, Dict, Any
 import uuid
 from clients.tools import (
@@ -28,6 +34,8 @@ tool_registry = {
     "process_errors_claude": process_errors_claude,
 }
 
+eval_registry = {"validate_toml": validate_toml}
+
 
 class Agent:
     def __init__(
@@ -37,7 +45,7 @@ class Agent:
         tools: List[Tool],
         tool_registry: Dict[str, Any],
         max_iters: int = 20,
-        timout: int = 300,
+        timeout: int = 300,
         logger: logging.Logger = None
     ) -> None:
         self.session_id = session_id or str(uuid.uuid4())
@@ -45,14 +53,32 @@ class Agent:
         self.tools = tools
         self.tool_registry = tool_registry
         self.max_iters = max_iters
-        self.timout = timout
+        self.timout = timeout
         self.messages: List[Message] = []
         self.logger = logger or logging.getLogger(__name__)
 
-    async def run(self, prompt: str):
-        print(prompt)
+    async def run(self, prompt: str) -> str:
+        message = Message(role="user", content=prompt)
+        self.messages.append(message)
 
-    def execute_tool(
+        req = AnthropicRequest(
+            model=self.aclient.model,
+            max_tokens=1024,
+            messages=self.messages,
+            tools=[tool_convert_markdown_to_toml_gemini],
+            tool_choice=ToolChoice(type="auto"),
+        )
+        self.max_iters = self.max_iters - 1
+        resp = self.aclient.get(req)
+        for content in resp.content:
+            if hasattr(content, "type") and content.type == "tool_use":
+                try:
+                    result = await self.execute_tool(content.name, content.input)
+                    return result.tool_result
+                except Exception as e:
+                    return f"Tool call failed with {str(e)}"
+
+    async def execute_tool(
             self,
             tool_name: str,
             tool_input: Dict[str, Any]
