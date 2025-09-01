@@ -5,6 +5,7 @@ from clients.anthropic_models import Tool, ToolInputSchema
 
 
 CLAUDE_MODEL = "claude-opus-4-20250514"
+GEMINI_MODEL = "gemini-2.5-flash"
 
 # Define `convert_markdown_to_toml_gemini` as a Tool
 # with ToolInputSchema for the Anthropic API
@@ -19,20 +20,13 @@ tool_convert_markdown_to_toml_gemini = Tool(
                 "type": "string",
                 "description": "The markdown document content to convert to TOML format",
             },
-            "model": {
-                "type": "string",
-                "description": "The Gemini model to use for conversion",
-                "default": "gemini-2.5-flash",
-            },
         },
         required=["markdown_doc"],
     ),
 )
 
 
-def convert_markdown_to_toml_gemini(
-    markdown_doc: str, model: str = "gemini-2.5-flash"
-) -> str:
+def convert_markdown_to_toml_gemini(markdown_doc: str) -> str:
     """
     Convert markdown to TOML using Gemini CLI.
     """
@@ -49,7 +43,7 @@ def convert_markdown_to_toml_gemini(
 
     try:
         result = subprocess.run(
-            ["gemini", "--model", model, "--prompt", prompt_with_args],
+            ["gemini", "--model", GEMINI_MODEL, "--prompt", prompt_with_args],
             capture_output=True,
             text=True,
             check=True,
@@ -60,9 +54,28 @@ def convert_markdown_to_toml_gemini(
         return f"#Error converting markdown\n# {str(e)}"
 
 
-def convert_markdown_to_toml_claude_code(
-    markdown_doc: str, model: str = CLAUDE_MODEL
-) -> str:
+# Define `convert_markdown_to_toml_claude_code` as a Tool
+# with ToolInputSchema for the Anthropic API
+tool_convert_markdown_to_toml_claude_code = Tool(
+    name="convert_markdown_to_toml_claude_code",
+    description="""
+        Convert markdown document to TOML format using Claude CLI.
+        Extracts key information and structures it as valid TOML.""",
+    input_schema=ToolInputSchema(
+        properties={
+            "markdown_doc": {
+                "type": "string",
+                "description": """
+                The markdown document content to convert to TOML format
+                """,
+            },
+        },
+        required=["markdown_doc"],
+    ),
+)
+
+
+def convert_markdown_to_toml_claude_code(markdown_doc: str) -> str:
     """
     Convert markdown to TOML using Gemini CLI.
     """
@@ -78,7 +91,7 @@ def convert_markdown_to_toml_claude_code(
 
     try:
         result = subprocess.run(
-            ["claude", "--model", model, "--prompt", prompt_with_args],
+            ["claude", "--model", CLAUDE_MODEL, "--prompt", prompt_with_args],
             capture_output=True,
             text=True,
             check=True,
@@ -87,6 +100,25 @@ def convert_markdown_to_toml_claude_code(
     except subprocess.CalledProcessError as e:
         print(f"Error calling claude: {e}")
         return f"# Error converting markdown\n# {str(e)}"
+
+
+# Define `validate_toml` as a Tool
+# with ToolInputSchema for the Anthropic API
+tool_validate_toml = Tool(
+    name="validate_toml",
+    description="""
+        Validate a TOML file for syntax errors.
+        Returns validation status, original file content, and any error messages.""",
+    input_schema=ToolInputSchema(
+        properties={
+            "tomlfile": {
+                "type": "string",
+                "description": "TOML content as string to validate",
+            },
+        },
+        required=["tomlfile"],
+    ),
+)
 
 
 def validate_toml(tomlfile: str) -> Tuple[bool, str, str]:
@@ -112,6 +144,29 @@ def validate_toml(tomlfile: str) -> Tuple[bool, str, str]:
 
     except Exception as e:
         return (False, tomlfile, f"Unexpected error while parsing: {str(e)}")
+
+
+# Define `process_errors_claude` as a Tool
+# with ToolInputSchema for the Anthropic API
+tool_process_errors_claude = Tool(
+    name="process_errors_claude",
+    description="""
+        Process TOML content errors using Claude AI to generate fixes.
+        Takes TOML content and error messages, returns corrected TOML.""",
+    input_schema=ToolInputSchema(
+        properties={
+            "tomlfile": {
+                "type": "string",
+                "description": "TOML file content as a string",
+            },
+            "errors": {
+                "type": "string",
+                "description": "Error description/messages to be fixed",
+            },
+        },
+        required=["tomlfile", "errors"],
+    ),
+)
 
 
 def process_errors_claude(tomlfile: str, errors: str) -> str:

@@ -25,9 +25,8 @@
 ├── repository
 │   └── database.py
 ├── secret_manager.py
-├── source.md
 ├── uv.lock
 └── yoyo.ini
 
-5 directories, 22 files
+5 directories, 21 files
 ```

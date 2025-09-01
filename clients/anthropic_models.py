@@ -53,6 +53,14 @@ class ToolChoice(BaseModel):
     disable_parallel_tool_use: Optional[bool] = False
 
 
+class ExecuteToolResult(BaseModel):
+    success: bool
+    tool_name: str
+    session_id: str
+    error_msg: Optional[str] = None
+    tool_result: Optional[str]
+
+
 class AnthropicRequest(BaseModel):
     model: str
     max_tokens: int = Field(gt=0, le=4096)
