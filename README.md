@@ -1,6 +1,8 @@
 # agents
 
 Building a simple agent like a psycho from scratch in python.
+No libs or sdks for the api's or agent.
+
 Gunna hook it to an api w FastAPI, enable interrupts and such not. 
 
 ## Setup
@@ -9,7 +11,7 @@ Gunna hook it to an api w FastAPI, enable interrupts and such not.
 # Install dependencies
 uv sync
 
-# Start the server
+# Start the server (this won't work yet)
 make start
 ```
 
@@ -19,7 +21,7 @@ make start
 # Run tests
 make test
 
-# Check code quality
+# Checks
 make check
 
 # Database migrations
