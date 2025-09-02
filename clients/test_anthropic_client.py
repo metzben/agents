@@ -52,7 +52,7 @@ def anthropic_client():
     return AnthropicClient(config, secret_mgr, model)
 
 
-@pytest.mark.anyio
+@pytest.mark.asyncio
 async def test_get_request(anthropic_client):
     markdown_file = read_file(".claude/commands/example.md")
     toml_prompt = f"""

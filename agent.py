@@ -5,7 +5,8 @@ from clients.anthropic_models import (
     Tool,
     ExecuteToolResult,
     AnthropicRequest,
-    ToolChoice
+    ToolChoice,
+    ToolResultBlock
 )
 from typing import List, Optional, Dict, Any
 import uuid
@@ -44,7 +45,7 @@ class Agent:
         aclient: AnthropicClient,
         tools: List[Tool],
         tool_registry: Dict[str, Any],
-        max_iters: int = 20,
+        max_iters: int = 4,
         timeout: int = 300,
         logger: logging.Logger = None
     ) -> None:
@@ -53,35 +54,69 @@ class Agent:
         self.tools = tools
         self.tool_registry = tool_registry
         self.max_iters = max_iters
-        self.timout = timeout
+        self.timeout = timeout
         self.messages: List[Message] = []
         self.logger = logger or logging.getLogger(__name__)
 
     async def run(self, prompt: str) -> str:
-        message = Message(role="user", content=prompt)
-        self.messages.append(message)
+        self.messages.append(Message(role="user", content=prompt))
 
-        req = AnthropicRequest(
-            model=self.aclient.model,
-            max_tokens=1024,
-            messages=self.messages,
-            tools=[tool_convert_markdown_to_toml_gemini],
-            tool_choice=ToolChoice(type="auto"),
-        )
-        self.max_iters = self.max_iters - 1
-        resp = self.aclient.get(req)
-        for content in resp.content:
-            if hasattr(content, "type") and content.type == "tool_use":
-                try:
-                    result = await self.execute_tool(content.name, content.input)
-                    return result.tool_result
-                except Exception as e:
-                    return f"Tool call failed with {str(e)}"
+        for iteration in range(self.max_iters):
+            req = AnthropicRequest(
+                model=self.aclient.model,
+                max_tokens=1024,
+                messages=self.messages,
+                tools=[
+                    tool_convert_markdown_to_toml_gemini
+                ],
+                tool_choice=ToolChoice(type="auto"),
+            )
+            resp = await self.aclient.get(req)
+            # add the response content to our messages
+            self.messages.append(Message(role=resp.role, content=resp.content))
+
+            for content in resp.content:
+                match content.type:
+                    case "tool_use":
+                        try:
+                            result = await self.execute_tool(
+                                tool_use_id=content.id,
+                                tool_name=content.name,
+                                tool_input=content.input
+                            )
+
+                            if result.success:
+                                # process ExecuteToolResult to ToolResultBlock
+                                # so we can send it back to the model
+                                tool_result_block = ToolResultBlock(
+                                    tool_use_id=result.tool_use_id,
+                                    content=result.tool_result,
+                                    is_error=False,
+                                    type="tool_result"
+                                )
+                                self.messages.append(
+                                    Message(role="user",
+                                            content=[tool_result_block])
+                                )
+                                return result.tool_result
+                            else:
+                                error_msg = f"Error in tool use: {
+                                    result.error_msg}"
+                                self.logger.error(error_msg)
+                                return error_msg
+
+                        except Exception as e:
+                            print(str(e))
+                    case "text":
+                        self.logger.info(
+                            f"Model text response: {content.text}")
+                        return content.text
 
     async def execute_tool(
-            self,
-            tool_name: str,
-            tool_input: Dict[str, Any]
+        self,
+        tool_use_id: str,
+        tool_name: str,
+        tool_input: Dict[str, Any]
     ) -> ExecuteToolResult:
 
         if tool_name not in self.tool_registry:
@@ -96,6 +131,7 @@ class Agent:
                 extra={
                     "tool_name": tool_name,
                     "session_id": self.session_id,
+                    "tool_use_id": tool_use_id,
                     "tool_arguments": list(tool_input.keys())
                 }
             )
@@ -105,30 +141,35 @@ class Agent:
                 extra={
                     "tool_name": tool_name,
                     "session_id": self.session_id,
+                    "tool_use_id": tool_use_id,
                 }
             )
             return ExecuteToolResult(
                 success=True,
+                tool_use_id=tool_use_id,
                 tool_name=tool_name,
                 session_id=self.session_id,
                 tool_result=result
             )
+
         except TypeError as e:
             error_msg = f"Invalid params for tool: '{tool_name}': {str(e)}"
             self.logger.error(
                 "Tool execution failed: invalid params",
                 extra={
                     "tool_name": tool_name,
+                    "tool_use_id": tool_use_id,
                     "session_id": self.session_id,
                     "error": error_msg
                 }
             )
             return ExecuteToolResult(
                 success=False,
+                tool_use_id=tool_use_id,
                 tool_name=tool_name,
                 session_id=self.session_id,
                 error_msg=error_msg,
-                tool_result=None
+                tool_result=error_msg
             )
         except Exception as e:
             error_msg = f"Tool '{tool_name}' execution failed: {str(e)}"
@@ -136,6 +177,7 @@ class Agent:
                 "Tool execution failed",
                 extra={
                     "tool_name": tool_name,
+                    "tool_use_id": tool_use_id,
                     "session_id": self.session_id,
                     "error": error_msg,
                     "error_type": type(e).__name__
@@ -143,8 +185,9 @@ class Agent:
             )
             return ExecuteToolResult(
                 success=False,
+                tool_use_id=tool_use_id,
                 tool_name=tool_name,
                 session_id=self.session_id,
                 error_msg=error_msg,
-                tool_result=None
+                tool_result=error_msg
             )

@@ -24,6 +24,15 @@ class ToolResultBlock(BaseModel):
 ContentBlock = Union[TextBlock, ToolUseBlock, ToolResultBlock]
 
 
+class ExecuteToolResult(BaseModel):
+    success: bool
+    tool_use_id: str
+    tool_name: str
+    session_id: str
+    error_msg: Optional[str] = None
+    tool_result: str
+
+
 class Message(BaseModel):
     role: Literal["user", "assistant"]
     content: Union[str, List[ContentBlock]]
@@ -51,14 +60,6 @@ class Tool(BaseModel):
 class ToolChoice(BaseModel):
     type: Literal["auto", "any", "tool", "none"]
     disable_parallel_tool_use: Optional[bool] = False
-
-
-class ExecuteToolResult(BaseModel):
-    success: bool
-    tool_name: str
-    session_id: str
-    error_msg: Optional[str] = None
-    tool_result: Optional[str]
 
 
 class AnthropicRequest(BaseModel):
