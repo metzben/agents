@@ -1,6 +1,7 @@
 # agents
 
-A Python project built with FastAPI and UV dependency management.
+Building a simple agent like a psycho from scratch in python.
+Gunna hook it to an api w FastAPI, enable interrupts and such not. 
 
 ## Setup
 
